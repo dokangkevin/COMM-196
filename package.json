@@ -2,19 +2,34 @@
   "name": "clubhub-phase-1",
   "version": "1.0.0",
   "private": true,
-  "description": "CLUBHUB Phase 1 personalized student discovery portal",
+  "description": "CLUBHUB personalized student discovery and club recruitment platform",
   "scripts": {
     "dev": "python3 -m http.server 4173",
-    "test": "python3 tests/test_static_app.py",
+    "test": "python3 tests/test_static_app.py && node --test tests/workflows.test.js && node --import tsx --test tests/services.test.ts",
+    "check:js": "node --check data.js && node --check phase2-data.js && node --check app.js && node --check phase2-ui.js",
+    "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts"
   },
   "prisma": { "seed": "tsx prisma/seed.ts" },
+  "dependencies": {
+    "@auth0/nextjs-auth0": "^4.13.1",
+    "@google/genai": "^2.1.0",
+    "@prisma/adapter-pg": "7.10.1",
+    "mammoth": "^1.11.0",
+    "next": "^16.0.0",
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.16.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^4.1.0"
+  },
   "devDependencies": {
-    "@prisma/client": "latest",
-    "prisma": "latest",
-    "tsx": "latest",
-    "typescript": "latest"
+    "@prisma/client": "7.10.1",
+    "@types/node": "^24.0.0",
+    "prisma": "7.10.1",
+    "tsx": "^4.23.0",
+    "typescript": "^7.0.0"
   }
 }

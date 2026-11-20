@@ -5,6 +5,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 DATA = (ROOT / "data.js").read_text()
 APP = (ROOT / "app.js").read_text()
+PHASE2 = (ROOT / "phase2-ui.js").read_text()
 HTML = (ROOT / "index.html").read_text()
 SCHEMA = (ROOT / "prisma/schema.prisma").read_text()
 CLUB_DATA = DATA.split("const CLUBS = [", 1)[1].split("];\n\nconst CATEGORY", 1)[0]
@@ -32,6 +33,18 @@ class ClubhubStaticTests(unittest.TestCase):
         for behavior in ("scoreClub", "fuzzyIncludes", "exportICS", "clubModal", "calendarEvents"):
             self.assertIn(f"function {behavior}", APP)
         self.assertIn("localStorage", APP)
+
+    def test_phase_two_navigation_and_modal_fixes(self):
+        for route in ("recommendations", "applications", "staff-overview", "staff-profile", "staff-recruitment", "form-builder", "applicants", "team"):
+            self.assertIn(route, PHASE2)
+        self.assertIn("modal-open", PHASE2)
+        self.assertIn("e.key==='Escape'", PHASE2)
+        self.assertIn("focusReturnSelector", PHASE2)
+
+    def test_dashboard_counters_are_data_driven(self):
+        self.assertIn("p.saved.length", PHASE2)
+        self.assertIn("myApps.length", PHASE2)
+        self.assertIn("topRecommendations()", PHASE2)
 
     def test_accessible_shell(self):
         self.assertIn('lang="en"', HTML)

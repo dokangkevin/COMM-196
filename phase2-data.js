@@ -1,4 +1,5 @@
 const STAFF_MEMBERSHIPS = [
+  {id:'staff-demo-finance',userId:'staffdemo',clubId:'finance-association',role:'OWNER',status:'APPROVED'},
   {id:'staff-alex-consulting',userId:'alex',clubId:'consulting-society',role:'OWNER',status:'APPROVED'},
   {id:'staff-maya-consulting',userId:'maya',clubId:'consulting-society',role:'REVIEWER',status:'APPROVED'},
   {id:'staff-sam-sustainability',userId:'sam',clubId:'sustainability-collective',role:'OWNER',status:'APPROVED'},
@@ -33,6 +34,8 @@ const APPLICATION_FORMS = [
 
 const seedSubmissionDate = days => { const d=new Date(); d.setDate(d.getDate()-days); return d.toISOString(); };
 const APPLICATION_SUBMISSIONS = [
+  {id:'submission-sam-finance',studentId:'sam',clubId:'finance-association',opportunityTitle:'Junior Analyst Team',formId:'form-finance-v1',formVersion:1,submittedAt:seedSubmissionDate(3),status:'SUBMITTED',answers:{'finance-motivation':'I want to connect financial analysis with projects that create measurable community value.','finance-year':'Fourth or above',market:'Public equities'},privateNotes:[]},
+  {id:'submission-jordan-finance',studentId:'jordan',clubId:'finance-association',opportunityTitle:'Junior Analyst Team',formId:'form-finance-v1',formVersion:1,submittedAt:seedSubmissionDate(5),status:'INTERVIEW',answers:{'finance-motivation':'I am interested in how narrative and market evidence combine in investment decisions.','finance-year':'Second',market:'Fintech'},privateNotes:[]},
   {id:'submission-maya-consulting',studentId:'maya',clubId:'consulting-society',opportunityTitle:'Community Consultant',formId:'form-consulting-v1',formVersion:1,submittedAt:seedSubmissionDate(2),status:'UNDER_REVIEW',answers:{motivation:'I want to apply structured problem solving to community-defined challenges and learn from a multidisciplinary team.',year:'Third',experience:'I coordinated a peer tutoring program and completed an introductory data analysis course.',interests:['Consulting','Strategy']},privateNotes:[{id:'note-1',reviewerId:'alex',text:'Strong community motivation; discuss availability in interview.',createdAt:seedSubmissionDate(1)}]},
   {id:'submission-jordan-consulting',studentId:'jordan',clubId:'consulting-society',opportunityTitle:'Community Consultant',formId:'form-consulting-v1',formVersion:1,submittedAt:seedSubmissionDate(1),status:'SUBMITTED',answers:{motivation:'Storytelling and audience research have taught me to frame ambiguous questions clearly.',year:'Second',experience:'Film production team coordination and student festival volunteering.',interests:['Marketing','Strategy']},privateNotes:[]},
   {id:'submission-alex-sustainability',studentId:'alex',clubId:'sustainability-collective',opportunityTitle:'Circular Campus Lead',formId:'form-sustainability-v1',formVersion:1,submittedAt:seedSubmissionDate(4),status:'INTERVIEW',answers:{impact:'I would make repair and reuse programs easier to discover through residence partnerships.',skills:['Event planning','Partnerships'],availability:'Yes'},privateNotes:[]}
@@ -51,6 +54,10 @@ function loadPhase2Store(){
     submissions:APPLICATION_SUBMISSIONS.map(s=>({...s,answers:{...s.answers},privateNotes:[...s.privateNotes]})),
     memberships:STAFF_MEMBERSHIPS.map(x=>({...x})),
     accessRequests:ACCESS_REQUESTS.map(x=>({...x})),
-    customOpportunities:[]
+    customOpportunities:[],
+    customClubs:[]
   };
 }
+
+// Explicitly isolated classroom identity. It is not a production authentication path.
+PERSONAS.staffdemo = {id:'staffdemo',name:'ClubHub Staff Demo',firstName:'Staff',initials:'CS',faculty:'Demo Staff',major:'Pacific Finance Association',year:'—',interests:['finance','leadership'],hours:6,onboarded:true,saved:[]};

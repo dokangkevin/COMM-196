@@ -1,6 +1,8 @@
-import { PrismaClient, OnboardingState, PublicationStatus } from "@prisma/client";
+import { PrismaClient, OnboardingState, PublicationStatus, StaffRole, ApprovalStatus, ReviewStatus } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 const inDays = (days: number) => { const date = new Date(); date.setHours(12, 0, 0, 0); date.setDate(date.getDate() + days); return date; };
 
 const clubs = [
@@ -63,6 +65,42 @@ async function main() {
   for (const [persona,slug] of initialSaves) {
     const club = await prisma.club.findUniqueOrThrow({where:{slug}});
     await prisma.savedClub.upsert({where:{studentId_clubId:{studentId:`profile-${persona}`,clubId:club.id}},update:{},create:{studentId:`profile-${persona}`,clubId:club.id}});
+  }
+
+  await prisma.user.upsert({ where: { id: "staffdemo" }, update: { displayName: "ClubHub Staff Demo" }, create: { id: "staffdemo", displayName: "ClubHub Staff Demo" } });
+  const financeClub = await prisma.club.findUniqueOrThrow({ where: { slug: "finance-association" } });
+  const consultingClub = await prisma.club.findUniqueOrThrow({ where: { slug: "consulting-society" } });
+  const sustainabilityClub = await prisma.club.findUniqueOrThrow({ where: { slug: "sustainability-collective" } });
+  for (const membership of [
+    { userId: "staffdemo", clubId: financeClub.id, role: StaffRole.OWNER },
+    { userId: "alex", clubId: consultingClub.id, role: StaffRole.OWNER },
+    { userId: "maya", clubId: consultingClub.id, role: StaffRole.REVIEWER },
+    { userId: "sam", clubId: sustainabilityClub.id, role: StaffRole.OWNER },
+    { userId: "jordan", clubId: sustainabilityClub.id, role: StaffRole.EDITOR },
+  ]) {
+    await prisma.clubStaffMembership.upsert({ where: { userId_clubId: { userId: membership.userId, clubId: membership.clubId } }, update: { role: membership.role, status: ApprovalStatus.APPROVED }, create: { ...membership, status: ApprovalStatus.APPROVED } });
+  }
+
+  const demoQuestionSchema = [
+    { id: "motivation", title: "Why are you interested in joining our club?", type: "LONG_TEXT", required: true, limit: 200, limitType: "words", options: [] },
+    { id: "year", title: "What year of study are you in?", type: "MULTIPLE_CHOICE", required: true, options: ["First", "Second", "Third", "Fourth or above"] },
+    { id: "experience", title: "What relevant experiences do you have?", type: "LONG_TEXT", required: false, limit: 150, limitType: "words", options: [] },
+  ];
+  const formTargets = [
+    ["finance-association", "Junior Analyst Team", "Junior Analyst Application"],
+    ["consulting-society", "Community Consultant", "Community Consultant Application"],
+    ["sustainability-collective", "Circular Campus Lead", "Circular Campus Lead Application"],
+  ] as const;
+  for (const [slug, title, name] of formTargets) {
+    const opportunity = await prisma.recruitmentOpportunity.findFirstOrThrow({ where: { club: { slug }, title } });
+    await prisma.applicationForm.upsert({ where: { opportunityId_version: { opportunityId: opportunity.id, version: 1 } }, update: { name, schema: demoQuestionSchema, publicationStatus: PublicationStatus.PUBLISHED }, create: { opportunityId: opportunity.id, version: 1, name, schema: demoQuestionSchema, publicationStatus: PublicationStatus.PUBLISHED, publishedAt: new Date() } });
+  }
+
+  const financeOpportunity = await prisma.recruitmentOpportunity.findFirstOrThrow({ where: { clubId: financeClub.id, title: "Junior Analyst Team" } });
+  const financeForm = await prisma.applicationForm.findUniqueOrThrow({ where: { opportunityId_version: { opportunityId: financeOpportunity.id, version: 1 } } });
+  for (const applicant of ["sam", "jordan"] as const) {
+    const submission = await prisma.applicationSubmission.upsert({ where: { applicantId_opportunityId: { applicantId: `profile-${applicant}`, opportunityId: financeOpportunity.id } }, update: {}, create: { applicantId: `profile-${applicant}`, opportunityId: financeOpportunity.id, formId: financeForm.id, formVersion: 1, reviewStatus: applicant === "jordan" ? ReviewStatus.INTERVIEW : ReviewStatus.SUBMITTED } });
+    await prisma.applicationAnswer.upsert({ where: { submissionId_questionRef: { submissionId: submission.id, questionRef: "motivation" } }, update: {}, create: { submissionId: submission.id, questionRef: "motivation", value: applicant === "jordan" ? "I am interested in how narrative and market evidence combine in investment decisions." : "I want to connect financial analysis with projects that create measurable community value." } });
   }
 }
 

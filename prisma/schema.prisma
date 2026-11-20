@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum PublicationStatus {
@@ -24,58 +23,91 @@ enum EventType {
   CLUB_EVENT
 }
 
+enum StaffRole {
+  OWNER
+  EDITOR
+  REVIEWER
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REVOKED
+}
+
+enum ReviewStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  INTERVIEW
+  ACCEPTED
+  NOT_SELECTED
+  WITHDRAWN
+}
+
 model User {
-  id             String          @id @default(cuid())
-  externalAuthId String?         @unique
-  displayName    String
-  email          String?         @unique
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  studentProfile StudentProfile?
+  id               String                @id @default(cuid())
+  externalAuthId   String?               @unique
+  displayName      String
+  email            String?               @unique
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  studentProfile   StudentProfile?
+  staffMemberships ClubStaffMembership[]
+  accessRequests   ClubAccessRequest[]   @relation("AccessRequester")
+  reviewedRequests ClubAccessRequest[]   @relation("AccessReviewer")
+  reviewNotes      PrivateReviewNote[]
 
   @@index([externalAuthId])
 }
 
 model StudentProfile {
-  id                      String          @id @default(cuid())
-  userId                  String          @unique
-  university              String          @default("University of British Columbia")
-  faculty                 String
-  major                   String
-  academicYear            Int
-  interests               String[]
-  preferredHoursPerWeek   Int?
-  onboardingState         OnboardingState @default(NOT_STARTED)
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
-  user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  savedClubs              SavedClub[]
+  id                    String                  @id @default(cuid())
+  userId                String                  @unique
+  university            String                  @default("University of British Columbia")
+  faculty               String
+  major                 String
+  academicYear          Int
+  interests             String[]
+  preferredHoursPerWeek Int?
+  onboardingState       OnboardingState         @default(NOT_STARTED)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedClubs            SavedClub[]
+  biography             String?
+  extractedProfile      Json?
+  cvFileName            String?
+  cvProcessedAt         DateTime?
+  submissions           ApplicationSubmission[]
 
   @@index([faculty])
   @@index([interests], type: Gin)
 }
 
 model Club {
-  id                         String                   @id @default(cuid())
-  slug                       String                   @unique
-  name                       String
-  description                String
-  mission                    String
-  category                   String
-  tags                       String[]
-  academicRelevance          String[]
-  imageRef                   String?
-  contactEmail               String?
-  socialLinks                Json?
-  membershipInformation     String
-  expectedHoursPerWeek       Int?
-  activities                 String[]
-  isRepresentativeDemoData   Boolean                  @default(true)
-  createdAt                  DateTime                 @default(now())
-  updatedAt                  DateTime                 @updatedAt
-  recruitmentOpportunities   RecruitmentOpportunity[]
-  events                     ClubEvent[]
-  savedBy                    SavedClub[]
+  id                       String                   @id @default(cuid())
+  slug                     String                   @unique
+  name                     String
+  description              String
+  mission                  String
+  category                 String
+  tags                     String[]
+  academicRelevance        String[]
+  imageRef                 String?
+  contactEmail             String?
+  socialLinks              Json?
+  membershipInformation    String
+  expectedHoursPerWeek     Int?
+  activities               String[]
+  isRepresentativeDemoData Boolean                  @default(true)
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  recruitmentOpportunities RecruitmentOpportunity[]
+  events                   ClubEvent[]
+  savedBy                  SavedClub[]
+  staffMemberships         ClubStaffMembership[]
+  accessRequests           ClubAccessRequest[]
 
   @@index([category])
   @@index([tags], type: Gin)
@@ -83,17 +115,24 @@ model Club {
 }
 
 model RecruitmentOpportunity {
-  id                String            @id @default(cuid())
-  clubId            String
-  title             String
-  description       String
-  requirements      String
-  applicationOpens  DateTime
-  applicationDeadline DateTime
-  publicationStatus PublicationStatus @default(DRAFT)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  club              Club               @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  id                   String                  @id @default(cuid())
+  clubId               String
+  title                String
+  description          String
+  requirements         String
+  applicationOpens     DateTime
+  applicationDeadline  DateTime
+  publicationStatus    PublicationStatus       @default(DRAFT)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  club                 Club                    @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  responsibilities     String?
+  expectedHoursPerWeek Int?
+  preferredExperience  String?
+  positionsAvailable   Int?
+  additionalNotes      String?
+  forms                ApplicationForm[]
+  submissions          ApplicationSubmission[]
 
   @@index([clubId, publicationStatus])
   @@index([applicationOpens])
@@ -125,4 +164,97 @@ model SavedClub {
 
   @@id([studentId, clubId])
   @@index([clubId])
+}
+
+model ClubStaffMembership {
+  id        String         @id @default(cuid())
+  userId    String
+  clubId    String
+  role      StaffRole
+  status    ApprovalStatus @default(PENDING)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club      Club           @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clubId])
+  @@index([clubId, status])
+}
+
+model ClubAccessRequest {
+  id               String         @id @default(cuid())
+  requesterId      String
+  clubId           String?
+  proposedClubData Json?
+  verificationInfo String
+  status           ApprovalStatus @default(PENDING)
+  reviewedById     String?
+  reviewedAt       DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  requester        User           @relation("AccessRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewedBy       User?          @relation("AccessReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  club             Club?          @relation(fields: [clubId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([clubId])
+}
+
+model ApplicationForm {
+  id                String                  @id @default(cuid())
+  opportunityId     String
+  version           Int
+  name              String
+  schema            Json
+  publicationStatus PublicationStatus       @default(DRAFT)
+  publishedAt       DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  opportunity       RecruitmentOpportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  submissions       ApplicationSubmission[]
+
+  @@unique([opportunityId, version])
+  @@index([opportunityId, publicationStatus])
+}
+
+model ApplicationSubmission {
+  id            String                 @id @default(cuid())
+  applicantId   String
+  opportunityId String
+  formId        String
+  formVersion   Int
+  submittedAt   DateTime               @default(now())
+  reviewStatus  ReviewStatus           @default(SUBMITTED)
+  updatedAt     DateTime               @updatedAt
+  applicant     StudentProfile         @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+  opportunity   RecruitmentOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  form          ApplicationForm        @relation(fields: [formId], references: [id], onDelete: Restrict)
+  answers       ApplicationAnswer[]
+  privateNotes  PrivateReviewNote[]
+
+  @@unique([applicantId, opportunityId])
+  @@index([opportunityId, reviewStatus, submittedAt])
+  @@index([applicantId, submittedAt])
+}
+
+model ApplicationAnswer {
+  id           String                @id @default(cuid())
+  submissionId String
+  questionRef  String
+  value        Json
+  submission   ApplicationSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, questionRef])
+}
+
+model PrivateReviewNote {
+  id           String                @id @default(cuid())
+  submissionId String
+  reviewerId   String
+  note         String
+  createdAt    DateTime              @default(now())
+  submission   ApplicationSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewer     User                  @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([submissionId, createdAt])
 }
