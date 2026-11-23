@@ -44,6 +44,39 @@ npx prisma generate
 
 The suite covers representative data, form versioning, student/staff isolation, application validation, deadline enforcement, club-scoped authorization, required navigation, and modal interaction wiring.
 
+## Production build and Vercel deployment
+
+CLUBHUB's current user-facing application is a static browser app. `index.html`
+loads the existing student and staff experiences from `data.js`,
+`phase2-data.js`, `app.js`, and `phase2-ui.js`. The TypeScript services in `src/`
+are retained for a future server-rendered integration, but there is currently no
+Next.js `app/` or `pages/` entry point.
+
+Create the deployable output with:
+
+```bash
+npm run build
+```
+
+The dependency-free build writes the static site and its linked documentation to
+`dist/`. `vercel.json` prevents framework auto-detection from treating the
+repository as a Next.js application merely because Next.js is installed for the
+prepared server integrations.
+
+For a Vercel project imported from this repository, use these settings (the
+checked-in `vercel.json` supplies the build and output values):
+
+- **Root Directory:** repository root (`.`)
+- **Framework Preset:** Other
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+- **Install Command:** leave at the Vercel default (`npm install`)
+
+No environment variables are required for the static demonstration. Auth0,
+PostgreSQL, Gemini, and `DEMO_MODE=false` become required only when the prepared
+server integrations are connected to a real Next.js runtime; the static demo
+must continue to use fictional data only.
+
 ## PostgreSQL and Prisma
 
 ```bash

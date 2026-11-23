@@ -5,6 +5,7 @@
   "description": "CLUBHUB personalized student discovery and club recruitment platform",
   "scripts": {
     "dev": "python3 -m http.server 4173",
+    "build": "node scripts/build-static.mjs",
     "test": "python3 tests/test_static_app.py && node --test tests/workflows.test.js && node --import tsx --test tests/services.test.ts",
     "check:js": "node --check data.js && node --check phase2-data.js && node --check app.js && node --check phase2-ui.js",
     "typecheck": "tsc --noEmit",
